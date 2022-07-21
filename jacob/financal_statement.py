@@ -1,6 +1,6 @@
 from jacob.crawlar import *
-# from jacob.crawlar import add_to_sql
-
+# from jacob.to_date import *
+import requests
 
 if not os.path.isdir(os.path.join("datasource")):
     os.mkdir(os.path.join("datasource"))
@@ -10,9 +10,9 @@ if not os.path.isdir(os.path.join("datasource","financal_statement")):
     
 
 
-def crawl_finance_statement():
+def crawl_finance_statement(year,season):
 
-    url ="https://mops.twse.com.tw/server-java/FileDownLoad?step=9&functionName=show_file2&fileName=tifrs-2022Q1.zip&filePath=/ifrs/2022/"
+    url ="https://mops.twse.com.tw/server-java/FileDownLoad?step=9&functionName=show_file2&fileName=tifrs-"+str(year)+"Q"+str(season)+".zip&filePath=/ifrs/"+str(year)+"/"
     req = requests.get(url,verify = True ,stream = True)
 
 
@@ -69,8 +69,6 @@ def import_finance_statement(year,season):
             statement.reset_index(inplace=True)
             statement.set_index(data_index,inplace=True)
             statement.reset_index(inplace=True)
-            # add_to_sql(table_name=Statement_name,new_df=statement,data_index=data_index)
-            add_to_sql(table_name=Statement_name,new_df=statement)
             add_to_pkl(table_name=Statement_name,new_df=statement)
 
 
