@@ -72,7 +72,3 @@ def import_finance_statement(year,season):
             add_to_pkl(table_name=Statement_name,new_df=statement)
 
 
-def remove_english(s):
-    result = re.sub(r'[a-zA-Z()]', "", s)
-    result = result.replace(" ","").replace(",","").replace("-","")
-    return result
