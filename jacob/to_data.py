@@ -7,12 +7,15 @@ import gc
 import datetime
 
 
-
+if not os.path.isdir('datasource'):
+    os.mkdir('datasource')
 
 
 class save_data:
     data_base = 'sqlite:///' + os.path.join(os.path.abspath('datasource'),'data.db')
     engine = sqlalchemy.create_engine(data_base, echo=False)
+
+    
     
     def __init__(self,table_name):
         self.table_name=table_name

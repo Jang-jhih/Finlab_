@@ -39,6 +39,27 @@ class crawlers:
     def __init__(self,date):
         self.date=date
         
+    def crawl_world_index(self):
+        date = self.date
+        url = "https://finance.yahoo.com/world-indices/"
+        req = tool.get_respons(url)
+        df = pd.read_html(req)[0]
+        
+        df = df.astype('str')
+        df = df.apply(lambda x:[i.replace('%',''.replace("^","").replace(" ","")) for i in x])
+        df = df.set_index('Name')
+        df = df.apply(lambda x:pd.to_numeric(x, errors='coerce'))
+        df = df.dropna(how = 'all' ,axis = 1).dropna(how = 'all' ,axis = 0)
+        del df['Volume']
+        
+        df['date'] = datetime.datetime.strptime(str(date),'%Y%m%d')
+        df = df.reset_index().set_index(['Name','date'])
+        
+        table = save_data('world_index')
+        table.add_to_pkl(df)
+        print(f'crawl {date} world_index ok')
+    
+    
     def crawl_price(self):
 
         url = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date="+str(self.date)+"&type=ALLBUT0999"

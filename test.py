@@ -43,3 +43,16 @@ for date in date_range:
         save_data(table_name='bargin_twe').add_to_pkl(new_df=df)
     except:
         pass
+    
+    
+#%%
+
+from jacob.crawlar import *
+from jacob.to_data import *
+
+
+
+date = 20220726
+
+craw = crawlers(date)
+craw.crawl_world_index()
