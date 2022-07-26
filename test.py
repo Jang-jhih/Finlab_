@@ -1,7 +1,7 @@
 from jacob.crawlar import *
 import datetime
 
-date = 20220101
+
 
 from dateutil import rrule
 
@@ -52,7 +52,13 @@ from jacob.to_data import *
 
 
 
-date = 20220726
+date = 20220724
 
 craw = crawlers(date)
 craw.crawl_world_index()
+
+#%%
+
+
+
+

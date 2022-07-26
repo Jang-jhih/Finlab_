@@ -1,15 +1,37 @@
 import sqlalchemy  
 import os
 import sqlite3
-import os
+
 import pandas as pd
 import gc
 import datetime
-
+import re
+import urllib
+from fake_useragent import UserAgent
+import urllib.request
+import ssl
 
 if not os.path.isdir('datasource'):
     os.mkdir('datasource')
 
+class tool:
+    def __init__(self):
+        pass
+    
+    def get_respons(url):
+        ua = UserAgent()
+        user_agent = ua.random  #隨機更新agent
+        headers = {'user-agent' : user_agent}
+        context = ssl._create_unverified_context() #取得SSL   
+        res = urllib.request.Request(url,headers=headers) # 發送請求
+        res = urllib.request.urlopen(res,context=context).read() #讀取Http
+        res = res.decode('big5',errors = 'ignore') #調整編碼
+        return res
+ 
+    def remove_english(self,s):
+        result = re.sub(r'[a-zA-Z()]', "", s)
+        result = result.replace(" ","").replace(",","").replace("-","")
+        return result
 
 class save_data:
     data_base = 'sqlite:///' + os.path.join(os.path.abspath('datasource'),'data.db')

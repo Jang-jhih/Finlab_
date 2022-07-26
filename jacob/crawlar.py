@@ -1,105 +1,40 @@
 import requests
 import pandas as pd
-import urllib.request
-import ssl
+import os
 import time
 from random import randint
 import io
-import re
-import urllib
-from fake_useragent import UserAgent
+
 import datetime
-import pandas as pd
-import requests
+
 import zipfile
-import os
+
+from jacob.to_data import tool
 from jacob.to_data import save_data
 
-class tool:
-    def __init__(self):
-        pass
-    
-    def get_respons(url):
-        ua = UserAgent()
-        user_agent = ua.random  #隨機更新agent
-        headers = {'user-agent' : user_agent}
-        context = ssl._create_unverified_context() #取得SSL   
-        res = urllib.request.Request(url,headers=headers) # 發送請求
-        res = urllib.request.urlopen(res,context=context).read() #讀取Http
-        res = res.decode('big5',errors = 'ignore') #調整編碼
-        return res
- 
-    def remove_english(self,s):
-        result = re.sub(r'[a-zA-Z()]', "", s)
-        result = result.replace(" ","").replace(",","").replace("-","")
-        return result
+
      
 
 class crawlers:
     def __init__(self,date):
         self.date=date
         
-    def crawl_world_index(self):
-        date = self.date
-        url = "https://finance.yahoo.com/world-indices/"
-        req = tool.get_respons(url)
-        df = pd.read_html(req)[0]
-        
-        df = df.astype('str')
-        df = df.apply(lambda x:[i.replace('%',''.replace("^","").replace(" ","")) for i in x])
-        df = df.set_index('Name')
-        df = df.apply(lambda x:pd.to_numeric(x, errors='coerce'))
+    def preprocess(df,date):
+        df = df.astype(str)
+        sign = [",",'=','^','%','"',' ']
+        for i in sign:
+            df = df.apply(lambda s : s.str.replace(i,""))
         df = df.dropna(how = 'all' ,axis = 1).dropna(how = 'all' ,axis = 0)
-        del df['Volume']
-        
         df['date'] = datetime.datetime.strptime(str(date),'%Y%m%d')
-        df = df.reset_index().set_index(['Name','date'])
-        
-        table = save_data('world_index')
-        table.add_to_pkl(df)
-        print(f'crawl {date} world_index ok')
-    
-    
-    def crawl_price(self):
-
-        url = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date="+str(self.date)+"&type=ALLBUT0999"
-        res = tool.get_respons(url)
-        
-        #開始ETL 
-        list = [i for i in res.split('\n') if len(i.split('",'))==17] 
-        newline = "\n".join(list)
-        try:
-            df = pd.read_csv(io.StringIO(newline.replace("=","")))
-            df = df.astype(str)
-            df = df.apply(lambda s : s.str.replace(",",""))
-            df = df.rename(columns={'證券代號':'stock_id'})
-            
-            # df = df.set_index(['stock_id','date'])
-            df = df.apply(lambda s:pd.to_numeric(s,errors="coerce"))
-            df = df[df.columns[df.isnull().sum() != len(df)]]
-            df['date'] = pd.to_datetime(self.date)
-            # 休息一下下
-            time.sleep(randint(5,10))
-        except:
-            df =  pd.DataFrame()
-                
-        return df
-        
-    def bargin_twe(self):
-        url = 'https://www.twse.com.tw/fund/T86?response=csv&date='+str(self.date)+'&selectType=ALLBUT0999'
-        res = tool.get_respons(url)
-        res = res.replace('=','')
-        df = pd.read_csv(io.StringIO(res),header=1)
-        df = df.astype('str').apply(lambda x:[i.replace(",","").replace(" ","") for i in x])
-        df = df.rename(columns={'證券代號':'stock_id'})
-        df['date'] = pd.to_datetime(self.date)
-        df.set_index(['date','stock_id'] ,inplace = True)
-        df = df.apply(lambda x:pd.to_numeric(x,errors='coerce')).dropna(how = 'all' , axis = 0).dropna(how = 'all' , axis = 1)
-        time.sleep(randint(5,10))
+        df = df.set_index(['stock_id','date'])
         return df    
+    
 
+    
+    
     def monthly_report_crawler(self):
-        date = datetime.datetime.strptime(str(self.date), "%Y%m%d")
+        date = self.date
+        date = datetime.datetime.strptime(str(date), "%Y%m%d")
         url = 'https://mops.twse.com.tw/nas/t21/pub/t21sc03_'+str(date.year -1911)+'_'+str(date.month)+'_0.html'
         req = requests.get(url)
         req.encoding = 'big5'
@@ -119,34 +54,101 @@ class crawlers:
         df['公司代號'] = df['公司代號'].astype(int)
         df = df.rename(columns={'公司代號':'stock_id'})
         df = df.set_index(['stock_id'])
-        df['date'] = pd.to_datetime(self.date)
+        df['date'] = pd.to_datetime(date)
         time.sleep(randint(5,10))
         return df
+    
+    
+    def crawl_world_index(self):
+        date = self.date
+        url = "https://finance.yahoo.com/world-indices/"
+        req = tool.get_respons(url)
+        df = pd.read_html(req)[0]
+        df = df.rename(columns={'Name':'stock_id'})
+        df = crawlers.preprocess(df,date)
+        df = df.apply(lambda x:pd.to_numeric(x, errors='coerce'))
+        df = df.dropna(how = 'all' ,axis = 1).dropna(how = 'all' ,axis = 0)
+        del df['Volume']
+        table = save_data('world_index')
+        table.add_to_pkl(df)
+        print(f'crawl {date} world_index ok')
+    
+    
+    def crawl_price(self):
+        date = self.date
+        url = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=csv&date="+str(date)+"&type=ALLBUT0999"
+        res = tool.get_respons(url)
+        
+        #開始ETL 
+        list = [i for i in res.split('\n') if len(i.split('",'))==17] 
+        newline = "\n".join(list)
+        try:
+            df = pd.read_csv(io.StringIO(newline.replace("=","")))
+            df = df.rename(columns={'證券代號':'stock_id'})
+            df = crawlers.preprocess(df,date)
+            
+            df = df.apply(lambda s:pd.to_numeric(s,errors="coerce"))
+            df = df[df.columns[df.isnull().sum() != len(df)]]
+            # 休息一下下
+            time.sleep(randint(5,10))
+        except:
+            df =  pd.DataFrame()
+                
+        save_data('price').add_to_pkl(df)
+        print(f'crawl {date} price ok')
+        
+        
+        
+    def bargin_twe(self):
+        date = self.date
+        url = 'https://www.twse.com.tw/fund/T86?response=csv&date='+str(date)+'&selectType=ALLBUT0999'
+        res = tool.get_respons(url)
+        df = pd.read_csv(io.StringIO(res),header=1)
+        df = df.rename(columns={'證券代號':'stock_id'})
+        df = crawlers.preprocess(df,date)
+        df = df.apply(lambda x:pd.to_numeric(x,errors='coerce')).dropna(how = 'all' , axis = 0).dropna(how = 'all' , axis = 1)
+        
+        save_data('bargin_twe').add_to_pkl(df)
+        time.sleep(randint(5,10))
+        print(f'crawl {date} bargin_twe ok')
+        
+        
+        
+    
+
+
         
 
+
+
     def crawl_benchmark(self):
-        url = f"https://www.twse.com.tw/exchangeReport/MI_5MINS_INDEX?response=csv&date={self.date}"
+        date = self.date
+        url = f"https://www.twse.com.tw/exchangeReport/MI_5MINS_INDEX?response=csv&date={date}"
         res = tool.get_respons(url)
         df = pd.read_csv(io.StringIO(res),header = 1)
+        df = df.rename(columns={'時間':'date'})
+        df['date'] = df['date'].str.replace('=','').str.replace('"','')
+        
+    
+        df['date'] = str(date) + ' ' + df['date']
+        df['date'] = pd.to_datetime(df['date'] ,format = '%Y%m%d %H:%M:%S' , errors='ignore')
+        df = df.set_index('date')
         df = df.dropna(how = 'all' , axis = 0).dropna(how = 'all' ,axis = 1).astype('str')
         
-        df = df.apply(lambda x :[i.replace("\"","").replace("=","").replace(",","") for i in x])
-        # pd.to_datetime(df['時間'])
-        df.set_index('時間',inplace=True)
-        df = df.astype('float')
-        df['date'] = pd.to_datetime(self.date)
+        df = df.apply(lambda x:x.str.replace(',','')).astype('float')
+        
+        save_data('benchmark').add_to_pkl(df)
         time.sleep(randint(5,10))
-        return df
+        print(f'crawl {date} benchmark ok')
+
 
 
 
 
 
     def CrawlerFinanceStatement_by_day(self):
-        
+        date = self.date
         date = datetime.datetime.strptime(str(self.date),'%Y%m%d')
-        
-        
         year = date.year
         if date.month == 3:
             this_season = 4
@@ -161,15 +163,10 @@ class crawlers:
         elif date.month == 11:
             this_season = 3
             month = 8
-        
-            
         crawlers(date).CrawlerFinanceStatement(year=year,season=this_season)
 
 
 
-
-
-        
     def CrawlerFinanceStatement(self,year,season):
         url ="https://mops.twse.com.tw/server-java/FileDownLoad?step=9&functionName=show_file2&fileName=tifrs-"+str(year)+"Q"+str(season)+".zip&filePath=/ifrs/"+str(year)+"/"
         # url ="https://mops.twse.com.tw/server-java/FileDownLoad?step=9&fileName=tifrs-"+str(year)+"Q"+str(season)+".zip&filePath=/home/html/nas/ifrs/"+str(year)+"/"
