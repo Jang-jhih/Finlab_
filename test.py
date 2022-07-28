@@ -1,5 +1,36 @@
 from jacob.crawlar import *
 import datetime
+import shutil
+import os
+
+from dateutil import rrule
+
+#3.5.8.11
+date = 20190501
+oneday = datetime.datetime.strptime(str(date),'%Y%m%d')
+today = datetime.date.today()-datetime.timedelta(days=1) 
+date_range =[i.strftime('%Y%m%d') for i in  rrule.rrule(rrule.DAILY, dtstart=oneday, until=today)]
+
+
+
+
+
+
+for date in date_range:
+    # 建立實例
+    craw = crawlers(date)
+    # 爬取財物
+    try:
+        craw.CrawlerFinanceStatement_by_day()
+    except:
+        pass
+        
+    shutil.rmtree(os.path.join('datasource','financal_statement'))
+    
+#%%
+
+from jacob.crawlar import *
+import datetime
 
 
 
@@ -15,16 +46,21 @@ oneday = datetime.datetime.strptime(str(oneday),'%Y%m%d')
 today = datetime.date.today()-datetime.timedelta(days=1) 
 date_range =[i.strftime('%Y%m%d') for i in  rrule.rrule(rrule.DAILY, dtstart=oneday, until=today)]
 
+
+
+
+
+
+
+
+
 for date in date_range:
     # 建立實例
+
+        
     craw = crawlers(date)
     
-    # 爬取財物
-    # try:
-    #     craw.CrawlerFinanceStatement_by_day()
-    # except:
-    #     pass
-    
+
     # 抓取指數
     try:
         df = craw.crawl_benchmark()
@@ -88,3 +124,5 @@ profit = profit.reset_index().pivot('year','month')['發行量加權股價指數
 
 
 sns.heatmap(profit)
+#%%
+
